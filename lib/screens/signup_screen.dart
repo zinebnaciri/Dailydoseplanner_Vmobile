@@ -1,33 +1,59 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
-import 'signup_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmController = TextEditingController();
 
   String errorMessage = '';
 
-  final String dummyEmail = 'test@test.com';
-  final String dummyPassword = '123456';
+  final supabase = Supabase.instance.client;
 
-  void login() {
-    if (emailController.text == dummyEmail &&
-        passwordController.text == dummyPassword) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    } else {
+  Future<void> handleSignup() async {
+    if (passwordController.text != confirmController.text) {
       setState(() {
-        errorMessage = 'Email ou mot de passe incorrect';
+        errorMessage = 'Les mots de passe ne correspondent pas';
+      });
+      return;
+    }
+
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      setState(() {
+        errorMessage = 'Veuillez remplir tous les champs';
+      });
+      return;
+    }
+
+    try {
+      final response = await supabase.from('users').insert({
+        'email': emailController.text,
+        'password': passwordController.text, // later: hash for security
+      }).select().maybeSingle(); // returns the inserted row
+
+      if (response != null) {
+        // Signup success → navigate to Home
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        setState(() {
+          errorMessage = 'Erreur lors de l\'inscription';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Erreur lors de l\'inscription: $e';
       });
     }
   }
@@ -56,20 +82,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // Title
-              Text(
-                'Daily Dose Planner',
+              const Text(
+                'Créer un compte',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 32,
+                style: TextStyle(
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.red,
                 ),
               ),
-
               const SizedBox(height: 40),
 
-              // Email field
               TextField(
                 controller: emailController,
                 decoration: const InputDecoration(
@@ -80,7 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Password field
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -92,7 +114,17 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Error message
+              TextField(
+                controller: confirmController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmer mot de passe',
+                  labelStyle: TextStyle(color: Colors.black),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               if (errorMessage.isNotEmpty)
                 Text(
                   errorMessage,
@@ -102,32 +134,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // Login button
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                onPressed: login,
+                onPressed: handleSignup,
                 child: const Text(
-                  'Se connecter',
+                  "S'inscrire",
                   style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Signup redirect
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SignupScreen()),
-                  );
-                },
-                child: const Text(
-                  "Pas de compte ? S'inscrire",
-                  style: TextStyle(color: Colors.black, fontSize: 16),
                 ),
               ),
             ],
